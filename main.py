@@ -1,19 +1,7 @@
 import telebot
 from telebot import types
-from flask import Flask
-import threading
 import os
 import json
-import html
-
-# --- SERVER (Bot o'chib qolmasligi uchun) ---
-app = Flask('')
-@app.route('/')
-def home(): return "EFUZ TIME SHOP Faol! 🚀"
-def run(): app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
-def keep_alive():
-    t = threading.Thread(target=run)
-    t.start()
 
 # --- SOZLAMALAR ---
 TOKEN = "8298795746:AAGkZaREbwwpRijHC4N8UgfUMGYQ7_T2jlc"
@@ -21,8 +9,9 @@ ADMIN_ID = 8144030372
 CHANNEL_ID = "@PRO_EFUZ_SHOP"
 bot = telebot.TeleBot(TOKEN)
 
-# Siz yuborgan rasmlar
-OLISH_IMAGE = "https://i.ibb.co/3ykC6W2/olaman-efuz.jpg" 
+# Siz xohlagan rasm manzilini o'zgaruvchiga olamiz
+OLISH_IMAGE = "https://i.ibb.co/3ykC6W2/olaman-efuz.jpg"
+
 USER_DB = "users_pro.json"
 ADS_DB = "published_ads.json"
 
@@ -69,6 +58,7 @@ def admin_buttons():
     ]
     for name, url in admins:
         markup.add(types.InlineKeyboardButton(text=name, url=url))
+    markup.add(types.InlineKeyboardButton("👨‍💻 Dasturchi", url="https://t.me/davlatbekturgunboyev"))
     return markup
 
 # --- KOMANDALAR ---
@@ -78,8 +68,7 @@ def start(message):
     bot.send_message(
         message.chat.id,
         f"👋 <b>Assalomu alaykum, {message.from_user.first_name}!</b>\n\n"
-        f"<b>EFUZ TIME SHOP</b> botiga xush kelibsiz! 😊\n"
-        f"Bu yerda siz o'z eFootball akkauntlaringizni tez va xavfsiz soting yoki o'zingizga mosini toping.",
+        f"<b>EFUZ TIME SHOP</b> botiga xush kelibsiz. Bu yerda siz xavfsiz va tezkor e'lon berishingiz mumkin.",
         reply_markup=main_menu(),
         parse_mode="HTML"
     )
@@ -87,13 +76,25 @@ def start(message):
 @bot.message_handler(func=lambda m: m.text == "📚 Qoidalar")
 def rules(message):
     text = (
-        "🛑 <b>BOTDAN FOYDALANISH QOIDALARI:</b>\n\n"
-        "1. Faqat <b>eFootball</b> akkauntlari reklamasi ruxsat etiladi.\n"
-        "2. Narxni asossiz pasaytirish yoki yolg'on ma'lumot berish taqiqlanadi.\n"
-        "3. Qoidalarni buzgan foydalanuvchi <b>MUDDATSIZ</b> bloklanadi.\n\n"
-        "⚠️ <i>E'loningiz o'chib ketmasligi uchun qoidalarga amal qiling!</i>"
+        "Ushbu botdan faqat efootball akkaunt reklamasi uchun foydalaning boshqa har "
+        "qanday maqsadda foydalansangiz yoki akkaunt narxini tushirib e'lon bersangiz "
+        "e'loningiz o'chirib yuboriladi, butunlay blok bo'lasiz va pulingiz qaytarilmaydi!"
     )
-    bot.send_message(message.chat.id, text, parse_mode="HTML")
+    bot.send_message(message.chat.id, text)
+
+@bot.message_handler(func=lambda m: m.text == "👨‍💻 Adminlar")
+def show_admins(message):
+    text = (
+        "♻️ <b>OLDI SOTDI GARANT ADMINLAR</b>\n"
+        "◾️ @eFadmin_uz\n"
+        "◾️ @eFGarant\n"
+        "◾️ @CR7_ISLAM07\n"
+        "◾️ @KAMOLXUJA19\n"
+        "◾️ @Sarik_CR7\n"
+        "◾️ @eF_Rasulov\n\n"
+        "Faqatgina ushbu adminlarga kanal nomidan javob beriladi."
+    )
+    bot.send_message(message.chat.id, text, reply_markup=admin_buttons(), parse_mode="HTML")
 
 @bot.message_handler(func=lambda m: m.text == "💰 Elon narxlari")
 def prices(message):
@@ -104,72 +105,63 @@ def prices(message):
     )
     bot.send_message(message.chat.id, text, parse_mode="HTML")
 
-@bot.message_handler(func=lambda m: m.text == "👨‍💻 Adminlar")
-def show_admins(message):
-    text = "♻️ <b>OLDI SOTDI GARANT ADMINLAR</b>\n\nFaqatgina ushbu adminlarga kanal nomidan javob beriladi. Ehtiyot bo'ling!"
-    bot.send_message(message.chat.id, text, reply_markup=admin_buttons(), parse_mode="HTML")
-
 @bot.message_handler(func=lambda m: m.text == "🔍 Akkaunt qidirish")
 def search_off(message):
-    bot.send_message(message.chat.id, "❌ <b>Kechirasiz, qidiruv tizimi vaqtincha o'chirilgan!</b>", parse_mode="HTML")
+    bot.send_message(message.chat.id, "❌ <b>Qidiruv tizimi o'chirilgan!</b>", parse_mode="HTML")
 
 # --- ELON BERISH ---
 @bot.message_handler(func=lambda m: m.text == "➕ Elon berish")
-def ask_type(message):
+def start_ad(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("🔺 Sotish eloni", callback_data="type_sotish"),
         types.InlineKeyboardButton("🔻 Olish eloni", callback_data="type_olish")
     )
-    bot.send_message(message.chat.id, "❓ <b>Qanday turdagi e'lon joylamoqchisiz?</b>\n\nTanlang:", reply_markup=markup, parse_mode="HTML")
+    bot.send_message(message.chat.id, "❓ <b>Qanday turdagi elon joylamoqchisiz?</b>", reply_markup=markup, parse_mode="HTML")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("type_"))
-def handle_type(call):
+def choose_type(call):
     ad_type = call.data.split("_")[1]
     user_temp[call.message.chat.id] = {"type": ad_type}
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-    
     if ad_type == "sotish":
-        msg = bot.send_message(call.message.chat.id, "📸 <b>Akkauntingizning rasmini yuboring:</b>", parse_mode="HTML")
-        bot.register_next_step_handler(msg, s_photo)
+        msg = bot.send_message(call.message.chat.id, "📸 <b>Akkaunt rasmini yuboring:</b>", parse_mode="HTML")
+        bot.register_next_step_handler(msg, process_photo)
     else:
-        msg = bot.send_message(call.message.chat.id, "💵 <b>Budjetingizni kiriting:</b>\n(Masalan: 500.000)", parse_mode="HTML")
-        bot.register_next_step_handler(msg, o_budget)
+        msg = bot.send_message(call.message.chat.id, "💵 <b>Elon uchun budgetingizni yuboring:</b>", parse_mode="HTML")
+        bot.register_next_step_handler(msg, process_budget)
 
 # --- SOTISH BOSQICHLARI ---
-def s_photo(message):
+def process_photo(message):
     if not message.photo:
-        msg = bot.send_message(message.chat.id, "⚠️ Iltimos, faqat rasm yuboring!")
-        bot.register_next_step_handler(msg, s_photo); return
+        bot.register_next_step_handler(message, process_photo); return
     user_temp[message.chat.id]['photo'] = message.photo[-1].file_id
-    msg = bot.send_message(message.chat.id, "💰 <b>Akkaunt narxini yozing:</b>", parse_mode="HTML")
-    bot.register_next_step_handler(msg, s_price)
+    msg = bot.send_message(message.chat.id, "💰 <b>Narxini kiriting:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_price)
 
-def s_price(message):
+def process_price(message):
     user_temp[message.chat.id]['price'] = message.text
-    msg = bot.send_message(message.chat.id, "🔄 <b>Obmen bormi? (Bor/Yo'q):</b>", parse_mode="HTML")
-    bot.register_next_step_handler(msg, s_obmen)
+    msg = bot.send_message(message.chat.id, "🔄 <b>Obmen bormi?:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_obmen)
 
-def s_obmen(message):
+def process_obmen(message):
     user_temp[message.chat.id]['obmen'] = message.text
-    msg = bot.send_message(message.chat.id, "⚠️ <b>Akkaunt holati (Toza/Bandi):</b>", parse_mode="HTML")
-    bot.register_next_step_handler(msg, s_info)
+    msg = bot.send_message(message.chat.id, "⚠️ <b>Holati (Toza/Bandi):</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, process_info)
 
-def s_info(message):
+def process_info(message):
     user_temp[message.chat.id]['info'] = message.text
-    msg = bot.send_message(message.chat.id, "📝 <b>Batafsil ma'lumot (Masalan: Son blitz 102):</b>", parse_mode="HTML")
-    bot.register_next_step_handler(msg, s_final)
+    msg = bot.send_message(message.chat.id, "📋 <b>Qo'shimcha ma'lumot:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, finish_sotish)
 
-def s_final(message):
+def finish_sotish(message):
     uid = message.chat.id
-    d = user_temp[uid]
+    data = user_temp[uid]
     contact = f"@{message.from_user.username}" if message.from_user.username else f"ID: {uid}"
-    
     caption = (
         f"<b>#SOTILADI</b>\n\n"
-        f"💵 <b>Narx:</b> {d['price']} so'm\n"
-        f"♻️ <b>Obmen ko'rish:</b> {d['obmen']}\n"
-        f"⚠️ <b>Google & Game Center:</b> {d['info']}\n"
+        f"💵 <b>Narx:</b> {data['price']} so'm\n"
+        f"♻️ <b>Obmen ko'rish:</b> {data['obmen']}\n"
+        f"⚠️ <b>Google & Game Center:</b> {data['info']}\n"
         f"☎️ <b>Murojaat:</b> {contact}\n\n"
         f"📋 <b>Qo'shilgan ma'lumot:</b>\n<i>{message.text}</i>\n\n"
         f"♻️ <b>OLDI SOTDI GARANT ADMINLAR</b>\n"
@@ -177,23 +169,20 @@ def s_final(message):
         f"◾️ @KAMOLXUJA19\n◾️ @Sarik_CR7\n◾️ @eF_Rasulov\n\n"
         f"🔻 <b>ELON BERISH UCHUN BOTIMIZ</b>\n@{bot.get_me().username}"
     )
-    sent = bot.send_photo(CHANNEL_ID, d['photo'], caption=caption, parse_mode="HTML")
-    
-    ad_save = {'photo': d['photo'], 'caption': caption, 'fast': 2, 'mid': sent.message_id}
-    save_ad(uid, ad_save)
-    bot.send_message(uid, "🎉 <b>Tabriklaymiz!</b> E'loningiz kanalga joylandi.", reply_markup=main_menu(), parse_mode="HTML")
+    sent = bot.send_photo(CHANNEL_ID, data['photo'], caption=caption, parse_mode="HTML")
+    save_ad(uid, {'photo': data['photo'], 'caption': caption, 'fast': 2, 'mid': sent.message_id})
+    bot.send_message(uid, "✅ E'lon kanalga yuborildi!", reply_markup=main_menu())
 
-# --- OLISH BOSQICHLARI ---
-def o_budget(message):
+# --- OLISH BOSQICHLARI (Tuzatilgan qism) ---
+def process_budget(message):
     user_temp[message.chat.id]['budget'] = message.text
-    msg = bot.send_message(message.chat.id, "📋 <b>Qanday akkaunt kerak? (To'liq ma'lumot bering):</b>", parse_mode="HTML")
-    bot.register_next_step_handler(msg, o_final)
+    msg = bot.send_message(message.chat.id, "📋 <b>Qanday akkaunt kerakligini to'liq yozing:</b>", parse_mode="HTML")
+    bot.register_next_step_handler(msg, finish_olish)
 
-def o_final(message):
+def finish_olish(message):
     uid = message.chat.id
     budget = user_temp[uid]['budget']
     contact = f"@{message.from_user.username}" if message.from_user.username else f"ID: {uid}"
-    
     caption = (
         f"<b>#OLINADI #FAQAT_TOZA</b>\n\n"
         f"💵 <b>BUDJET:</b> {budget} so'm\n"
@@ -204,10 +193,15 @@ def o_final(message):
         f"◾️ @KAMOLXUJA19\n◾️ @Sarik_CR7\n◾️ @eF_Rasulov\n\n"
         f"🔻 <b>ELON BERISH UCHUN BOTIMIZ</b>\n@{bot.get_me().username}"
     )
-    bot.send_photo(CHANNEL_ID, OLISH_IMAGE, caption=caption, parse_mode="HTML")
-    bot.send_message(uid, "✅ <b>Sizning qidiruv e'loningiz yuborildi!</b>", reply_markup=main_menu(), parse_mode="HTML")
+    # Rasm yuklashda qotib qolmasligi uchun try-except
+    try:
+        bot.send_photo(CHANNEL_ID, OLISH_IMAGE, caption=caption, parse_mode="HTML")
+    except:
+        bot.send_message(CHANNEL_ID, caption, parse_mode="HTML")
+        
+    bot.send_message(uid, "✅ Olish e'loningiz yuborildi!", reply_markup=main_menu())
 
-# --- ELONLARIM VA FAST ---
+# --- ELONLARIM ---
 @bot.message_handler(func=lambda m: m.text == "📂 Elonlarim")
 def my_ads(message):
     uid = str(message.chat.id)
@@ -218,24 +212,20 @@ def my_ads(message):
             markup.add(types.InlineKeyboardButton(f"⚡️ FAST ({ad['fast']})", callback_data=f"fast_{idx}"))
             bot.send_photo(message.chat.id, ad['photo'], caption=ad['caption'], reply_markup=markup, parse_mode="HTML")
     else:
-        bot.send_message(message.chat.id, "😔 <b>Sizda hali e'lonlar mavjud emas.</b>", parse_mode="HTML")
+        bot.send_message(message.chat.id, "🤷‍♂️ <b>Sizda aktiv elon topilmadi!</b>", parse_mode="HTML")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("fast_"))
 def handle_fast(call):
     idx = int(call.data.split("_")[1])
     uid = str(call.message.chat.id)
     ads = get_ads()
-    
     if ads[uid][idx]['fast'] > 0:
         ads[uid][idx]['fast'] -= 1
         with open(ADS_DB, "w") as f: json.dump(ads, f)
-        
-        bot.send_message(CHANNEL_ID, "⚡️ <b>#TEZKOR_SOTUV</b>\n\nUshbu e'lon egasi shoshilinch sotmoqda!", reply_to_message_id=ads[uid][idx]['mid'])
-        bot.answer_callback_query(call.id, "✅ E'loningiz kanal tepasiga ko'tarildi!", show_alert=True)
+        bot.send_message(CHANNEL_ID, "⚡️ <b>#FAST_SOTUV</b>\n\nUshbu elon egasi shoshilinch sotmoqda!", reply_to_message_id=ads[uid][idx]['mid'])
+        bot.answer_callback_query(call.id, "✅ Eloningiz kanal tepasiga ko'tarildi!", show_alert=True)
     else:
         bot.answer_callback_query(call.id, "❌ FAST imkoniyati tugagan!", show_alert=True)
 
-if __name__ == "__main__":
-    keep_alive()
-    bot.polling(none_stop=True)
+bot.polling(none_stop=True)
     
